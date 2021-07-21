@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bayee.petition.mapper.DataInfoMapper">
+  <!-- 数据总量 -->
+  <select id="getDataCount" resultType="java.lang.Integer">
+    select sum(count) count from hb_catlog
+  </select>
+
+  <!-- 数据种类数 -->
+  <select id="getCategoryCount" resultType="java.lang.Integer">
+    select count(*) category_count  from (select category from hb_catlog where category is not null GROUP BY category) t
+  </select>
+
+  <!-- 数据表数 -->
+  <select id="getTableCount" resultType="java.lang.Integer">
+    select count(1) table_count from hb_catlog
+  </select>
+
+</mapper>

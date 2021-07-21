@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bayee.petition.mapper.HbCatlogMapper">
+
+  <resultMap id="HbCatlogDAOMap" type="com.bayee.petition.domain.HbCatlogDAO">
+  	<id column="id" jdbcType="INTEGER" property="id" />
+    <result column="h_tb_name" jdbcType="VARCHAR" property="tableName" />
+    <result column="h_tb_name_ch" jdbcType="VARCHAR" property="tableNameCh" />
+    <result column="category" jdbcType="VARCHAR" property="category" />
+    <result column="origin_system" jdbcType="VARCHAR" property="originSystem" />
+    <result column="injection_type" jdbcType="INTEGER" property="injectionType" />
+    <result column="update_frequency" jdbcType="VARCHAR" property="updateFrequency" />
+    <result column="security_leve" jdbcType="INTEGER" property="securityLeve" />
+    <result column="tags" jdbcType="VARCHAR" property="tags" />
+    <result column="fields_en" jdbcType="VARCHAR" property="fields" />
+    <result column="fields_ch" jdbcType="VARCHAR" property="fieldsCh" />
+    <result column="creation_date"  property="creationDate" />
+    <result column="count" jdbcType="INTEGER" property="count" />
+  </resultMap>
+
+
+
+  <!--当前任务-->
+  <select id="getCurrentJob" resultMap="HbCatlogDAOMap">
+    select * from hb_catlog ORDER BY creation_date desc  LIMIT 5
+  </select>
+
+  <!--数据采集趋势-->
+  <select id="getDataCollectionTrend" resultMap="HbCatlogDAOMap">
+    SELECT v.day creation_date,IFNULL(b.count,0)  count FROM (
+    SELECT DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS `day`
+    UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 1 DAY), '%Y-%m-%d') AS `day`
+    UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 2 DAY), '%Y-%m-%d') AS `day`
+    UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 3 DAY), '%Y-%m-%d') AS `day`
+    UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 4 DAY), '%Y-%m-%d') AS `day`
+    UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 5 DAY), '%Y-%m-%d') AS `day`
+    UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 6 DAY), '%Y-%m-%d') AS `day`
+    UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 7 DAY), '%Y-%m-%d') AS `day`
+    UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 8 DAY), '%Y-%m-%d') AS `day`
+    UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 9 DAY), '%Y-%m-%d') AS `day`
+    UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 10 DAY), '%Y-%m-%d') AS `day`
+    UNION SELECT DATE_FORMAT((CURDATE() - INTERVAL 11 DAY), '%Y-%m-%d') AS `day`
+    ) v LEFT JOIN
+    (SELECT DATE_FORMAT(a.creation_date,'%Y-%m-%d') AS paTime,sum(count) count FROM hb_catlog a GROUP BY patime) b
+    ON b.paTime=v.day;
+  </select>
+
+  <!--数据量Top5-->
+  <select id="getDataTop5" resultMap="HbCatlogDAOMap">
+    select h_tb_name_ch,count from hb_catlog ORDER BY count desc LIMIT 5;
+  </select>
+
+  <!--数据种类-->
+  <select id="getDataCategory" resultMap="HbCatlogDAOMap">
+    select category,count(category) count from hb_catlog where category is not null GROUP BY category
+  </select>
+
+  <!--数据来源-->
+  <select id="getDataSources" resultMap="HbCatlogDAOMap">
+    SELECT  count(1) count,injection_type from hb_catlog GROUP BY injection_type
+  </select>
+
+
+  <!--分页查询-->
+  <select id="findAllNature" parameterType="com.bayee.petition.domain.HbCatlogDAO"
+          resultMap="HbCatlogDAOMap">
+    select * from hb_catlog
+    <where>
+      <if test="tableName !=null and tableName!=''">
+        AND (h_tb_name LIKE CONCAT('%',#{tableName},'%') or h_tb_name_ch LIKE CONCAT('%',#{tableName},'%') 
+        or origin_system LIKE CONCAT('%',#{tableName},'%'))
+      </if>
+      <if test="category !=null and category!=''">
+        AND category = #{category}
+      </if>
+      <if test="originSystem !=null and originSystem!=''">
+        AND origin_system = #{originSystem}
+      </if>
+    </where>
+
+    <choose>
+      <when test="page !=null or page !=''">
+        LIMIT #{page},#{pageSize}
+      </when>
+      <otherwise>
+        LIMIT 0,10
+      </otherwise>
+    </choose>
+  </select>
+
+  <!--查询总数-->
+  <select id="count" parameterType="com.bayee.petition.domain.HbCatlogDAO" resultType="java.lang.Integer">
+		select COUNT(id) counts from hb_catlog
+    <where>
+      <if test="tableName !=null and tableName!=''">
+        AND (h_tb_name LIKE CONCAT('%',#{tableName},'%') or h_tb_name_ch LIKE CONCAT('%',#{tableName},'%') 
+        or origin_system LIKE CONCAT('%',#{tableName},'%'))
+      </if>
+      <if test="category !=null and category!=''">
+        AND category = #{category}
+      </if>
+      <if test="originSystem !=null and originSystem!=''">
+        AND origin_system = #{originSystem}
+      </if>
+    </where>
+	</select>
+
+	<select id="selectCategory" resultType="String">
+		select category FROM hb_catlog WHERE category is not NULL GROUP BY category
+	</select>
+	
+	<select id="selectOrigin"  resultType="String">
+		select origin_system FROM hb_catlog WHERE origin_system is not NULL GROUP BY origin_system
+	</select>
+	
+	<select id="findById" resultMap="HbCatlogDAOMap">
+		select * from hb_catlog where id=#{id}
+	</select>
+</mapper>
