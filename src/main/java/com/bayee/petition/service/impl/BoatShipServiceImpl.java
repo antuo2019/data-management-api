@@ -21,6 +21,7 @@ import org.opengis.filter.sort.SortBy;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -76,7 +77,10 @@ public class BoatShipServiceImpl implements BoatShipService {
     public Map<String,Object> queryFeatures(DataStore datastore, List<Query> queries) throws IOException {
         Map<String,Object> jsonData = new TreeMap<>();
 
-        List<Object> data = new ArrayList<>();
+        Map<String,Object> data = new HashMap<>();
+
+        boolean flag = true;
+
         for (Query query : queries) {
             System.out.println("Running query " + ECQL.toCQL(query.getFilter()));
             if (query.getPropertyNames() != null) {
@@ -86,15 +90,14 @@ public class BoatShipServiceImpl implements BoatShipService {
                 SortBy sort = query.getSortBy()[0];
                 System.out.println("Sorting by " + sort.getPropertyName() + " " + sort.getSortOrder());
             }
-            // submit the query, and get back an iterator over matching features
-            // use try-with-resources to ensure the reader is closed
+
             try (FeatureReader<SimpleFeatureType, SimpleFeature> reader =
                          datastore.getFeatureReader(query, Transaction.AUTO_COMMIT)) {
-                // loop through all results, only print out the first 10
+
                 while (reader.hasNext()) {
                     Map<String,Object> map = new HashMap<>();
                     SimpleFeature feature = reader.next();
-
+                    String mmsi = null;
                     List<AttributeDescriptor> attributeDescriptors = feature.getType().getAttributeDescriptors();
                     List<Object> attributes = feature.getAttributes();
                     for (int i = 0; i < feature.getAttributeCount(); i++) {
@@ -102,9 +105,22 @@ public class BoatShipServiceImpl implements BoatShipService {
                         if(!"location_point".equals(field)) {
                             map.put(attributeDescriptors.get(i).getLocalName(), attributes.get(i));
                         }
+                        if("mmsi".equals(field)) {
+                            mmsi = attributes.get(i).toString();
+                        }
                     }
-
-                    data.add(map);
+                    if (data.containsKey(mmsi)) {
+                        long update_time = ((Date)(((Map<String,Object>)data.get(mmsi)).get("update_time"))).getTime();
+                        long update_time1 = ((Date)map.get("update_time")).getTime();
+                        if(update_time1<=update_time) {
+                            flag = false;
+                        }
+                    } else {
+                        flag = true;
+                    }
+                    if (flag) {
+                        data.put(mmsi,map);
+                    }
                 }
             }
         }
