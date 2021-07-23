@@ -13,4 +13,6 @@ public interface BoatShipService {
 
     public Map<String,Object> query(String ecql) throws ParseException;
 
+    public Map<String,Object> queryAisPoint(String ecql) throws ParseException;
+
 }

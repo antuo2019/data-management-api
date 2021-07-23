@@ -65,6 +65,35 @@ public class BoatShipServiceImpl implements BoatShipService {
         }
     }
 
+    @Override
+    public Map<String,Object> queryAisPoint(String ecql) throws ParseException {
+        String[] arg ={"--hbase.catalog", "zs:yhh", "--hbase.zookeepers", "manager1:2181"};
+
+        Options options = createOptions(new HBaseDataStoreFactory().getParametersInfo());
+        CommandLine command = CommandLineDataStore.parseArgs(getClass(), options, arg);
+        this.params = CommandLineDataStore.getDataStoreParams(command, options);
+        this.cleanup = command.hasOption("cleanup");
+        this.data = new BoatShipData();
+        this.readOnly = true;
+        initializeFromOptions(command);
+        DataStore datastore = null;
+        try {
+            datastore = createDataStore();
+            System.out.println(datastore);
+            if (readOnly) {
+                ensureSchema(datastore, data);
+            }
+
+            List<Query> queries = getTestQueries(data,ecql);
+
+            return queryAisPoint(datastore, queries);
+        } catch (Exception e) {
+            throw new RuntimeException("Error running quickstart:", e);
+        } finally {
+            cleanup(datastore, data.getTypeName());
+        }
+    }
+
     public List<SimpleFeature> getTestFeatures(TutorialData data, List<String> jsons) {
         List<SimpleFeature> features = data.getTestData(jsons);
         return features;
@@ -82,7 +111,7 @@ public class BoatShipServiceImpl implements BoatShipService {
         boolean flag = true;
 
         for (Query query : queries) {
-            System.out.println("Running query " + ECQL.toCQL(query.getFilter()));
+
             if (query.getPropertyNames() != null) {
                 System.out.println("Returning attributes " + Arrays.asList(query.getPropertyNames()));
             }
@@ -123,6 +152,74 @@ public class BoatShipServiceImpl implements BoatShipService {
                     }
                 }
             }
+        }
+        jsonData.put("count",data.size());
+        jsonData.put("data",data);
+        return jsonData;
+    }
+
+    public Map<String,Object> queryAisPoint(DataStore datastore, List<Query> queries) throws IOException {
+        Map<String,Object> jsonData = new TreeMap<>();
+
+        Map<String,Object> data = new HashMap<>();
+
+        boolean flag = true;
+
+        for (Query query : queries) {
+            if (query.getPropertyNames() != null) {
+                System.out.println("Returning attributes " + Arrays.asList(query.getPropertyNames()));
+            }
+            if (query.getSortBy() != null) {
+                SortBy sort = query.getSortBy()[0];
+                System.out.println("Sorting by " + sort.getPropertyName() + " " + sort.getSortOrder());
+            }
+
+            try (FeatureReader<SimpleFeatureType, SimpleFeature> reader =
+                         datastore.getFeatureReader(query, Transaction.AUTO_COMMIT)) {
+
+                while (reader.hasNext()) {
+                    Map<String,Object> map = new HashMap<>();
+                    SimpleFeature feature = reader.next();
+                    String mmsi = null;
+                    List<AttributeDescriptor> attributeDescriptors = feature.getType().getAttributeDescriptors();
+                    List<Object> attributes = feature.getAttributes();
+                    for (int i = 0; i < feature.getAttributeCount(); i++) {
+                        String field = attributeDescriptors.get(i).getLocalName();
+                        if("longitude".equals(field)) {
+                            map.put(attributeDescriptors.get(i).getLocalName(), attributes.get(i));
+                        }
+                        if("latitude".equals(field)) {
+                            map.put(attributeDescriptors.get(i).getLocalName(), attributes.get(i));
+                        }
+                        if("mmsi".equals(field)) {
+                            map.put(attributeDescriptors.get(i).getLocalName(), attributes.get(i));
+                        }
+                        if("update_time".equals(field)) {
+                            map.put(attributeDescriptors.get(i).getLocalName(), attributes.get(i));
+                        }
+                        if("mmsi".equals(field)) {
+                            mmsi = attributes.get(i).toString();
+                        }
+                    }
+                    if (data.containsKey(mmsi)) {
+                        long update_time = ((Date)(((Map<String,Object>)data.get(mmsi)).get("update_time"))).getTime();
+                        long update_time1 = ((Date)map.get("update_time")).getTime();
+                        if(update_time1<=update_time) {
+                            flag = false;
+                        }
+                    } else {
+                        flag = true;
+                    }
+                    if (flag) {
+                        data.put(mmsi,map);
+                    }
+                }
+            }
+        }
+        Set<String> set = data.keySet();
+        for (String s : set) {
+            ((Map<String,Object>)data.get(s)).remove("update_time");
+            ((Map<String,Object>)data.get(s)).remove("mmsi");
         }
         jsonData.put("count",data.size());
         jsonData.put("data",data);

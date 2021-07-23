@@ -52,7 +52,7 @@ public class BoatShipData implements TutorialData {
             attributes.append("source:String,");
             attributes.append("areaid:String,");
             attributes.append("boat_speed:Float,");
-            attributes.append("location_time:Date,");
+            attributes.append("is_registration:Integer,");
             attributes.append("update_time:Date,");
             attributes.append("*location_point:Point:srid=4326,");
             attributes.append("registration:String,");
@@ -89,12 +89,6 @@ public class BoatShipData implements TutorialData {
                     } else {
                         builder.set(s,jsonObject.get(s));
                     }
-                    if ("location_time".equals(s)) {
-                        builder.set(s, Date.from(LocalDateTime.parse(sdf.format(jsonObject.getDate(s)), dateFormat).toInstant(ZoneOffset.ofHours(8))));
-                    } else {
-                        builder.set(s,jsonObject.get(s));
-                    }
-
                 }
                 builder.featureUserData(Hints.USE_PROVIDED_FID, Boolean.TRUE);
                 SimpleFeature feature = builder.buildFeature(jsonObject.getString("mmsi"));
@@ -149,12 +143,5 @@ public class BoatShipData implements TutorialData {
             // ECQL.toFilter("bbox(geom,-83,33,-80,35) AND dtg between '2017-12-31T00:00:00.000Z' and '2018-01-02T00:00:00.000Z'");
         }
         return subsetFilter;
-    }
-
-    public static void main(String[] args) {
-        String josn = "{\"update_time\":1617770722521}";
-        JSONObject jsonObject = JSONObject.parseObject(josn);
-        Date update_time = jsonObject.getDate("update_time");
-        System.out.println(update_time);
     }
 }

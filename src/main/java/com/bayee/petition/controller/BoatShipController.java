@@ -26,4 +26,10 @@ public class BoatShipController {
         return boatShipService.query(ecql);
     }
 
+    @RequestMapping("/queryAisPoint")
+    @ResponseBody
+    public Map<String, Object> queryAisPoint(String ecql) throws ParseException {
+        return boatShipService.queryAisPoint(ecql);
+    }
+
 }
