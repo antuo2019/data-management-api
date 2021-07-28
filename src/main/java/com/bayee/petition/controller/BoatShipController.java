@@ -22,14 +22,20 @@ public class BoatShipController {
 
     @RequestMapping("/query")
     @ResponseBody
-    public Map<String, Object> query(String ecql) throws ParseException {
-        return boatShipService.query(ecql);
+    public Map<String, Object> query(String points,String startDate,String endDate,String attributes) throws ParseException {
+        return boatShipService.query(points, startDate, endDate, attributes);
     }
 
     @RequestMapping("/queryAisPoint")
     @ResponseBody
-    public Map<String, Object> queryAisPoint(String ecql) throws ParseException {
-        return boatShipService.queryAisPoint(ecql);
+    public Map<String, Object> queryAisPoint(String points,String startDate,String endDate,String attributes) throws ParseException {
+        return boatShipService.queryAisPoint(points, startDate, endDate, attributes);
+    }
+
+    @RequestMapping("/queryHistoryAisPoint")
+    @ResponseBody
+    public Map<String, Object> queryHistoryAisPoint(String points,String startDate,String endDate,String attributes) throws ParseException {
+        return boatShipService.queryHistoryAisPoint(points, startDate, endDate, attributes);
     }
 
 }

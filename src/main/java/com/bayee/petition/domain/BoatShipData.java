@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -143,5 +144,10 @@ public class BoatShipData implements TutorialData {
             // ECQL.toFilter("bbox(geom,-83,33,-80,35) AND dtg between '2017-12-31T00:00:00.000Z' and '2018-01-02T00:00:00.000Z'");
         }
         return subsetFilter;
+    }
+
+    public static void main(String[] args) {
+        Instant now = Instant.now();
+        System.out.println(now.toString());
     }
 }

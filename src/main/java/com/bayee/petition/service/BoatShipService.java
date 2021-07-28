@@ -11,8 +11,10 @@ import java.util.Map;
 
 public interface BoatShipService {
 
-    public Map<String,Object> query(String ecql) throws ParseException;
+    public Map<String,Object> query(String points,String startDate,String endDate,String attributes) throws ParseException;
 
-    public Map<String,Object> queryAisPoint(String ecql) throws ParseException;
+    public Map<String,Object> queryAisPoint(String points,String startDate,String endDate,String attributes) throws ParseException;
+
+    public Map<String,Object> queryHistoryAisPoint(String points,String startDate,String endDate,String attributes) throws ParseException;
 
 }

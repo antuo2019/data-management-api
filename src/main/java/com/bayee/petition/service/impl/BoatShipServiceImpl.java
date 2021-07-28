@@ -1,6 +1,7 @@
 package com.bayee.petition.service.impl;
 
 import com.bayee.petition.domain.BoatShipData;
+import com.bayee.petition.domain.BoatShipHistoryData;
 import com.bayee.petition.domain.TutorialData;
 import com.bayee.petition.mapper.CommandLineDataStore;
 import com.bayee.petition.service.BoatShipService;
@@ -22,6 +23,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -36,8 +40,7 @@ public class BoatShipServiceImpl implements BoatShipService {
     private  boolean cleanup;
     private  boolean readOnly;
 
-    @Override
-    public Map<String,Object> query(String ecql) throws ParseException {
+    public Map<String,Object> query1(String ecql) throws ParseException {
         String[] arg ={"--hbase.catalog", "zs:yhh", "--hbase.zookeepers", "manager1:2181"};
 
         Options options = createOptions(new HBaseDataStoreFactory().getParametersInfo());
@@ -54,7 +57,6 @@ public class BoatShipServiceImpl implements BoatShipService {
             if (readOnly) {
                 ensureSchema(datastore, data);
             }
-
             List<Query> queries = getTestQueries(data,ecql);
 
             return queryFeatures(datastore, queries);
@@ -66,7 +68,62 @@ public class BoatShipServiceImpl implements BoatShipService {
     }
 
     @Override
-    public Map<String,Object> queryAisPoint(String ecql) throws ParseException {
+    public Map<String,Object> query(String points,String startDate,String endDate,String attributes) throws ParseException {
+        String[] arg ={"--hbase.catalog", "zs:yhh", "--hbase.zookeepers", "manager1:2181"};
+
+        Options options = createOptions(new HBaseDataStoreFactory().getParametersInfo());
+        CommandLine command = CommandLineDataStore.parseArgs(getClass(), options, arg);
+        this.params = CommandLineDataStore.getDataStoreParams(command, options);
+        this.cleanup = command.hasOption("cleanup");
+        this.data = new BoatShipData();
+        this.readOnly = true;
+        initializeFromOptions(command);
+        DataStore datastore = null;
+        try {
+            datastore = createDataStore();
+            System.out.println(datastore);
+            if (readOnly) {
+                ensureSchema(datastore, data);
+            }
+            String ecql;
+            DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.CHINESE);
+            if(startDate != null && endDate !=null && attributes!=null) {
+                startDate = LocalDateTime.parse(startDate, dateFormat).toInstant(ZoneOffset.ofHours(8)).toString();
+                endDate = LocalDateTime.parse(endDate, dateFormat).toInstant(ZoneOffset.ofHours(8)).toString();
+                String[] split = attributes.split(",");
+                String attribute = "";
+                for (int i=0; i<split.length-1; i++) {
+                    attribute = attribute+split[i]+" AND ";
+                }
+                attribute = attribute+split[split.length-1];
+                ecql = "contains('POLYGON ((" + points + "))', location_point) AND update_time DURING "+startDate+"/"+endDate+" AND "+attribute;
+            } else if(startDate != null && endDate !=null) {
+                startDate = LocalDateTime.parse(startDate, dateFormat).toInstant(ZoneOffset.ofHours(8)).toString();
+                endDate = LocalDateTime.parse(endDate, dateFormat).toInstant(ZoneOffset.ofHours(8)).toString();
+                ecql = "contains('POLYGON ((" + points + "))', location_point) AND update_time DURING "+startDate+"/"+endDate;
+            } else if(startDate==null && endDate==null && attributes!=null){
+                String[] split = attributes.split(",");
+                String attribute = "";
+                for (int i=0; i<split.length-1; i++) {
+                    attribute = attribute+split[i]+" AND ";
+                }
+                attribute = attribute+split[split.length-1];
+                ecql = "contains('POLYGON ((" + points + "))', location_point) AND "+attribute;
+            } else {
+                ecql = "contains('POLYGON ((" + points + "))', location_point)";
+            }
+            List<Query> queries = getTestQueries(data,ecql);
+
+            return queryFeatures(datastore, queries);
+        } catch (Exception e) {
+            throw new RuntimeException("Error running quickstart:", e);
+        } finally {
+            cleanup(datastore, data.getTypeName());
+        }
+    }
+
+    @Override
+    public Map<String,Object> queryAisPoint(String points,String startDate,String endDate,String attributes) throws ParseException {
         String[] arg ={"--hbase.catalog", "zs:yhh", "--hbase.zookeepers", "manager1:2181"};
 
         Options options = createOptions(new HBaseDataStoreFactory().getParametersInfo());
@@ -84,6 +141,33 @@ public class BoatShipServiceImpl implements BoatShipService {
                 ensureSchema(datastore, data);
             }
 
+            String ecql;
+            DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.CHINESE);
+            if(startDate != null && endDate !=null && attributes!=null) {
+                startDate = LocalDateTime.parse(startDate, dateFormat).toInstant(ZoneOffset.ofHours(8)).toString();
+                endDate = LocalDateTime.parse(endDate, dateFormat).toInstant(ZoneOffset.ofHours(8)).toString();
+                String[] split = attributes.split(",");
+                String attribute = "";
+                for (int i=0; i<split.length-1; i++) {
+                    attribute = attribute+split[i]+" AND ";
+                }
+                attribute = attribute+split[split.length-1];
+                ecql = "contains('POLYGON ((" + points + "))', location_point) AND update_time DURING "+startDate+"/"+endDate+" AND "+attribute;
+            } else if(startDate != null && endDate !=null) {
+                startDate = LocalDateTime.parse(startDate, dateFormat).toInstant(ZoneOffset.ofHours(8)).toString();
+                endDate = LocalDateTime.parse(endDate, dateFormat).toInstant(ZoneOffset.ofHours(8)).toString();
+                ecql = "contains('POLYGON ((" + points + "))', location_point) AND update_time DURING "+startDate+"/"+endDate;
+            } else if(startDate==null && endDate==null && attributes!=null){
+                String[] split = attributes.split(",");
+                String attribute = "";
+                for (int i=0; i<split.length-1; i++) {
+                    attribute = attribute+split[i]+" AND ";
+                }
+                attribute = attribute+split[split.length-1];
+                ecql = "contains('POLYGON ((" + points + "))', location_point) AND "+attribute;
+            } else {
+                ecql = "contains('POLYGON ((" + points + "))', location_point)";
+            }
             List<Query> queries = getTestQueries(data,ecql);
 
             return queryAisPoint(datastore, queries);
@@ -94,9 +178,60 @@ public class BoatShipServiceImpl implements BoatShipService {
         }
     }
 
-    public List<SimpleFeature> getTestFeatures(TutorialData data, List<String> jsons) {
-        List<SimpleFeature> features = data.getTestData(jsons);
-        return features;
+    @Override
+    public Map<String,Object> queryHistoryAisPoint(String points,String startDate,String endDate,String attributes) throws ParseException {
+        String[] arg ={"--hbase.catalog", "zs:yhh", "--hbase.zookeepers", "manager1:2181"};
+
+        Options options = createOptions(new HBaseDataStoreFactory().getParametersInfo());
+        CommandLine command = CommandLineDataStore.parseArgs(getClass(), options, arg);
+        this.params = CommandLineDataStore.getDataStoreParams(command, options);
+        this.cleanup = command.hasOption("cleanup");
+        this.data = new BoatShipHistoryData();
+        this.readOnly = true;
+        initializeFromOptions(command);
+        DataStore datastore = null;
+        try {
+            datastore = createDataStore();
+            System.out.println(datastore);
+            if (readOnly) {
+                ensureSchema(datastore, data);
+            }
+
+            String ecql;
+            DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.CHINESE);
+            if(startDate != null && endDate !=null && attributes!=null) {
+                startDate = LocalDateTime.parse(startDate, dateFormat).toInstant(ZoneOffset.ofHours(8)).toString();
+                endDate = LocalDateTime.parse(endDate, dateFormat).toInstant(ZoneOffset.ofHours(8)).toString();
+                String[] split = attributes.split(",");
+                String attribute = "";
+                for (int i=0; i<split.length-1; i++) {
+                    attribute = attribute+split[i]+" AND ";
+                }
+                attribute = attribute+split[split.length-1];
+                ecql = "contains('POLYGON ((" + points + "))', location_point) AND update_time DURING "+startDate+"/"+endDate+" AND "+attribute;
+            } else if(startDate != null && endDate !=null) {
+                startDate = LocalDateTime.parse(startDate, dateFormat).toInstant(ZoneOffset.ofHours(8)).toString();
+                endDate = LocalDateTime.parse(endDate, dateFormat).toInstant(ZoneOffset.ofHours(8)).toString();
+                ecql = "contains('POLYGON ((" + points + "))', location_point) AND update_time DURING "+startDate+"/"+endDate;
+            } else if(startDate==null && endDate==null && attributes!=null){
+                String[] split = attributes.split(",");
+                String attribute = "";
+                for (int i=0; i<split.length-1; i++) {
+                    attribute = attribute+split[i]+" AND ";
+                }
+                attribute = attribute+split[split.length-1];
+                ecql = "contains('POLYGON ((" + points + "))', location_point) AND "+attribute;
+            } else {
+                ecql = "contains('POLYGON ((" + points + "))', location_point)";
+            }
+            List<Query> queries = getTestQueries(data,ecql);
+
+            return queryHistoryAisPoint(datastore, queries);
+        } catch (Exception e) {
+            throw new RuntimeException("Error running quickstart:", e);
+        } finally {
+            cleanup(datastore, data.getTypeName());
+        }
     }
 
     public List<Query> getTestQueries(TutorialData data,String ecql) {
@@ -105,11 +240,8 @@ public class BoatShipServiceImpl implements BoatShipService {
 
     public Map<String,Object> queryFeatures(DataStore datastore, List<Query> queries) throws IOException {
         Map<String,Object> jsonData = new TreeMap<>();
-
         Map<String,Object> data = new HashMap<>();
-
         boolean flag = true;
-
         for (Query query : queries) {
 
             if (query.getPropertyNames() != null) {
@@ -226,6 +358,43 @@ public class BoatShipServiceImpl implements BoatShipService {
         return jsonData;
     }
 
+    public Map<String,Object> queryHistoryAisPoint(DataStore datastore, List<Query> queries) throws IOException {
+        Map<String,Object> jsonData = new TreeMap<>();
+
+        Set<Object> data = new HashSet<>();
+        for (Query query : queries) {
+            if (query.getPropertyNames() != null) {
+                System.out.println("Returning attributes " + Arrays.asList(query.getPropertyNames()));
+            }
+            if (query.getSortBy() != null) {
+                SortBy sort = query.getSortBy()[0];
+                System.out.println("Sorting by " + sort.getPropertyName() + " " + sort.getSortOrder());
+            }
+            try (FeatureReader<SimpleFeatureType, SimpleFeature> reader =
+                         datastore.getFeatureReader(query, Transaction.AUTO_COMMIT)) {
+                while (reader.hasNext()) {
+                    Map<String,Object> map = new HashMap<>();
+                    SimpleFeature feature = reader.next();
+                    List<AttributeDescriptor> attributeDescriptors = feature.getType().getAttributeDescriptors();
+                    List<Object> attributes = feature.getAttributes();
+                    for (int i = 0; i < feature.getAttributeCount(); i++) {
+                        String field = attributeDescriptors.get(i).getLocalName();
+                        if("longitude".equals(field)) {
+                            map.put(attributeDescriptors.get(i).getLocalName(), attributes.get(i));
+                        }
+                        if("latitude".equals(field)) {
+                            map.put(attributeDescriptors.get(i).getLocalName(), attributes.get(i));
+                        }
+                    }
+                    data.add(map);
+                }
+            }
+        }
+        jsonData.put("count",data.size());
+        jsonData.put("data",data);
+        return jsonData;
+    }
+
     public void cleanup(DataStore datastore, String typeName) {
         if (datastore != null) {
             try {
@@ -248,7 +417,6 @@ public class BoatShipServiceImpl implements BoatShipService {
     }
 
     public DataStore createDataStore() throws IOException {
-        System.out.println("Loading datastore");
 
         // use geotools service loading to get a datastore instance
         DataStore datastore = DataStoreFinder.getDataStore(params);
@@ -276,18 +444,5 @@ public class BoatShipServiceImpl implements BoatShipService {
             throw new IllegalStateException("Schema '" + data.getTypeName() + "' does not exist. " +
                     "Please run the associated QuickStart to generate the test data.");
         }
-    }
-
-    public SimpleFeatureType getSimpleFeatureType(TutorialData data) {
-        return data.getSimpleFeatureType();
-    }
-
-
-    public void createSchema(DataStore datastore, SimpleFeatureType sft) throws IOException {
-        System.out.println("Creating schema: " + DataUtilities.encodeType(sft));
-        // we only need to do the once - however, calling it repeatedly is a no-op
-        sft.getUserData().put("override.reserved.words",true);
-        datastore.createSchema(sft);
-        System.out.println();
     }
 }
